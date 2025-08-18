@@ -1,148 +1,140 @@
 import asyncio
 import logging
-from datetime import datetime
-
-from config import ADMIN_IDS, RESTART_ON_ERROR
-from keyboards import get_admin_card_approval_keyboard, get_main_menu
-from main import bot
 import os
 import sys
 
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from config import ADMIN_IDS, MAIN_CHANNEL_ID
+
 logger = logging.getLogger(__name__)
 
-async def send_order_to_admin(order_id: str, order: dict, payment_method: str):
-    order_text = f"""📝 Новый заказ ожидает подтверждения:
-
-👤 Пользователь: {order['user_name']} (@{order['user_id']})
-📦 Тип: {'Звезды' if order['type'] == 'stars' else 'Telegram Premium'}
-{'⭐ Количество: ' + str(order.get('stars', 'не указано')) if order['type'] == 'stars' else '💎 Срок: ' + str(order.get('months', 'не указано')) + ' месяцев'}
-💰 Сумма: {order['price']}₴
-💳 Способ оплаты: {payment_method}
-🕒 Время: {order['created_at']}
-
-Пожалуйста, подтвердите или отклоните заказ."""
-    for admin_id in ADMIN_IDS:
-        try:
-            await bot.send_message(admin_id, order_text, reply_markup=get_admin_card_approval_keyboard(order_id))
-            logger.info(f"Заказ {order_id} отправлен администратору {admin_id} на подтверждение")
-        except Exception as e:
-            logger.error(f"Ошибка отправки заказа {order_id} администратору {admin_id}: {e}")
-
-async def send_card_order_to_admin(order_id: str, order: dict):
-    try:
-        order_text = f"""💳 Новый заказ с оплатой картой:
-
-👤 Пользователь: {order['user_name']} (ID: {order['user_id']})
-📝 Username клиента: {order.get('customer_username', 'не указан')}
-📦 Тип: {'Звезды' if order['type'] == 'stars' else 'Telegram Premium'}
-{'⭐ Количество: ' + str(order.get('stars', 'не указано')) if order['type'] == 'stars' else '💎 Срок: ' + str(order.get('months', 'не указано')) + ' месяцев'}
-💰 Сумма: {order['price']}₴
-💳 Способ оплаты: Картой
-🕒 Время: {order['created_at']}
-
-Скриншот оплаты:"""
-        for admin_id in ADMIN_IDS:
-            try:
-                await bot.send_photo(
-                    admin_id,
-                    photo=order['payment_screenshot'],
-                    caption=order_text,
-                    reply_markup=get_admin_card_approval_keyboard(order_id)
-                )
-                logger.info(f"Заказ с оплатой картой {order_id} отправлен администратору {admin_id}")
-            except Exception as e:
-                logger.error(f"Ошибка отправки заказа с оплатой картой {order_id} администратору {admin_id}: {e}")
-                await bot.send_message(
-                    order['user_id'],
-                    "❌ Помилка при відправці замовлення адміністратору. Спробуйте ще раз або зв'яжіться з підтримкою.",
-                    reply_markup=get_main_menu()
-                )
-                return
-    except Exception as e:
-        logger.error(f"Общая ошибка в send_card_order_to_admin для заказа {order_id}: {str(e)}", exc_info=True)
-        await bot.send_message(
-            order['user_id'],
-            "❌ Помилка при обробці замовлення. Спробуйте ще раз або зв'яжіться з підтримкою.",
-            reply_markup=get_main_menu()
-        )
-
-async def check_split_api_health():
-    """Проверка доступности Split API"""
-    try:
-        async with aiohttp.ClientSession() as session:
-            headers = {"Authorization": f"Bearer {config.SPLIT_API_TOKEN}"}
-            async with session.get(f"{config.SPLIT_API_URL}/health", headers=headers, timeout=10) as response:
-                return response.status == 200
-    except Exception as e:
-        logger.error(f"Split API недоступен: {e}")
-        return False
+async def get_bot():
+    """Get bot instance dynamically to avoid circular imports"""
+    from main import bot
+    return bot
 
 async def subscription_required(user_id: int) -> bool:
-    if not await start_handlers.check_subscription(user_id):  # Импорт из start_handlers
-        subscription_text = """❌ Щоб користуватися ботом, потрібно підписатися на наш основний канал!
-
-📺 Підпишіться на канал і натисніть кнопку "Перевірити підписку" """
-        
-        await bot.send_message(
-            user_id,
-            subscription_text,
-            reply_markup=keyboards.get_subscription_keyboard()
-        )
-        logger.info(f"Пользователь {user_id} не подписан, отправлено сообщение о подписке")
-        return False
-    return True
-
-async def safe_restart():
-    logger.info("🔄 Перезапуск бота через 3 секунды...")
-    await asyncio.sleep(3)
-    
+    """Check if user is subscribed to the main channel"""
     try:
-        for admin_id in ADMIN_IDS:
-            await bot.send_message(admin_id, "🔄 Бот перезапускається через помилку...")
-    except:
-        pass
+        bot = await get_bot()
+        member = await bot.get_chat_member(MAIN_CHANNEL_ID, user_id)
+        is_subscribed = member.status in ['member', 'administrator', 'creator']
+        
+        if not is_subscribed:
+            keyboard = InlineKeyboardMarkup()
+            keyboard.add(InlineKeyboardButton("📢 Підписатися", url="https://t.me/starsZEMSTA"))
+            keyboard.add(InlineKeyboardButton("✅ Перевірити підписку", callback_data="check_subscription"))
+            
+            await bot.send_message(
+                user_id,
+                "❌ Для використання бота потрібна підписка на наш канал!\n\n"
+                "📢 Підпишіться на канал та натисніть 'Перевірити підписку'",
+                reply_markup=keyboard
+            )
+            return False
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка проверки подписки для пользователя {user_id}: {e}")
+        return True  # В случае ошибки разрешаем доступ
+
+async def send_order_to_admin(order_id: str, order: dict, payment_method: str):
+    """Send order to admin for approval"""
+    bot = await get_bot()
     
-    os.execl(sys.executable, sys.executable, *sys.argv)
+    order_text = f"""📋 Новый заказ #{order_id}
+
+👤 Пользователь: {order['user_name']} (ID: {order['user_id']})
+💰 К оплате: {order['price']}₴
+💳 Метод оплаты: {payment_method}
+
+{'⭐ Количество звезд: ' + str(order['stars']) if order['type'] == 'stars' else '💎 Срок: ' + str(order['months']) + ' месяцев'}
+
+⏰ Время создания: {order['created_at']}
+🔄 Статус: Ожидает подтверждения"""
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton("✅ Подтвердить", callback_data=f"approve_{order_id}"),
+        InlineKeyboardButton("❌ Отклонить", callback_data=f"reject_{order_id}")
+    )
+    
+    for admin_id in ADMIN_IDS:
+        try:
+            await bot.send_message(admin_id, order_text, reply_markup=keyboard)
+            logger.info(f"Заказ {order_id} отправлен админу {admin_id}")
+        except Exception as e:
+            logger.error(f"Ошибка отправки заказа {order_id} админу {admin_id}: {e}")
+
+async def send_card_order_to_admin(order_id: str, order: dict):
+    """Send card payment order with screenshot to admin"""
+    bot = await get_bot()
+    
+    order_text = f"""📋 Оплата картой #{order_id}
+
+👤 Пользователь: {order['user_name']} (ID: {order['user_id']})
+📱 Username для зачисления: {order.get('customer_username', 'Не указан')}
+💰 К оплате: {order['price']}₴
+💳 Метод оплаты: Карта
+
+{'⭐ Количество звезд: ' + str(order['stars']) if order['type'] == 'stars' else '💎 Срок: ' + str(order['months']) + ' месяцев'}
+
+⏰ Время создания: {order['created_at']}
+🔄 Статус: Ожидает проверки оплаты"""
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton("✅ Подтвердить", callback_data=f"approve_{order_id}"),
+        InlineKeyboardButton("❌ Отклонить", callback_data=f"reject_{order_id}")
+    )
+    
+    for admin_id in ADMIN_IDS:
+        try:
+            if order.get('payment_screenshot'):
+                await bot.send_photo(
+                    admin_id, 
+                    photo=order['payment_screenshot'],
+                    caption=order_text,
+                    reply_markup=keyboard
+                )
+            else:
+                await bot.send_message(admin_id, order_text, reply_markup=keyboard)
+            logger.info(f"Заказ с оплатой картой {order_id} отправлен админу {admin_id}")
+        except Exception as e:
+            logger.error(f"Ошибка отправки заказа с оплатой картой {order_id} админу {admin_id}: {e}")
 
 async def handle_critical_error(exc_type, exc_value, exc_traceback):
-    error_message = f"""🚨 КРИТИЧНА ПОМИЛКА:
-
-Type: {exc_type.__name__}
-Message: {str(exc_value)}
-Traceback: {traceback.format_exc()}
-
-Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"""
+    """Handle critical errors"""
+    error_msg = f"Критическая ошибка: {exc_type.__name__}: {exc_value}"
+    logger.critical(error_msg)
     
+    # Notify admins about critical error
     try:
+        bot = await get_bot()
         for admin_id in ADMIN_IDS:
-            await bot.send_message(admin_id, error_message)
-    except:
-        pass
-    
-    logger.critical(error_message)
-    
-    if RESTART_ON_ERROR:
-        await safe_restart()
-
-async def on_startup(dp):
-    database.init_db()  # Импорт из database
-    logger.info("🚀 Бот запущено успішно!")
-    
-    try:
-        for admin_id in ADMIN_IDS:
-            await bot.send_message(admin_id, "🚀 Бот запущено та готовий до роботи!")
+            try:
+                await bot.send_message(
+                    admin_id,
+                    f"🚨 Критическая ошибка бота!\n\n{error_msg}\n\n🔄 Попытка автоматического перезапуска..."
+                )
+            except Exception as e:
+                logger.error(f"Не удалось уведомить админа {admin_id} об ошибке: {e}")
     except Exception as e:
-        logger.error(f"Не вдалося повідомити адміна про запуск: {e}")
+        logger.error(f"Ошибка при уведомлении администраторов: {e}")
+    
+    # Wait a bit before restart
+    await asyncio.sleep(5)
+    await safe_restart()
 
-async def on_shutdown(dp):
-    logger.info("🔴 Бот завершує роботу...")
+async def safe_restart():
+    """Safely restart the bot"""
+    logger.info("🔄 Выполняю безопасный перезапуск...")
     
     try:
-        for admin_id in ADMIN_IDS:
-            await bot.send_message(admin_id, "🔴 Бот завершує роботу...")
+        # Close bot session
+        bot = await get_bot()
+        await bot.session.close()
     except Exception as e:
-        logger.error(f"Не вдалося повідомити адміна про завершення: {e}")
-
-
-
-        
+        logger.error(f"Ошибка при закрытии сессии бота: {e}")
+    
+    # Restart the process
+    os.execv(sys.executable, ['python'] + sys.argv)
