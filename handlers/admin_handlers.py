@@ -49,7 +49,7 @@ async def handle_admin_card_approval(callback_query: types.CallbackQuery, state:
             months_count = order.get('months', 'не указано')
             purchase_info = f"💎 Куплено преміум: {months_count} місяців\n"
 
-        bot_instance = await get_bot()  # Динамический импорт
+        bot_instance = await get_bot()
 
         if action == "approve":
             logger.info(f"Заказ {order_id} подтвержден администратором")
@@ -288,5 +288,4 @@ def register_handlers(dp: Dispatcher):
     dp.register_message_handler(start_broadcast, text="📤 Розсилка")
     dp.register_message_handler(handle_broadcast_text, state=BroadcastStates.waiting_for_broadcast_text)
     dp.register_message_handler(restart_command, commands=['restart'])
-    # Запуск cleanup в фоне
-    asyncio.create_task(cleanup_old_orders())
+    # Убрали asyncio.create_task(cleanup_old_orders()) отсюда
