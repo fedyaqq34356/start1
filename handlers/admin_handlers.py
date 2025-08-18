@@ -11,10 +11,14 @@ from keyboards import get_main_menu
 from states import BroadcastStates, ReviewStates
 from api_utils import get_recipient_address, get_ton_payment_body
 from utils import safe_restart
-from main import bot
 import keyboards
 
 logger = logging.getLogger(__name__)
+
+async def get_bot():
+    """Get bot instance dynamically to avoid circular imports"""
+    from main import bot
+    return bot
 
 async def handle_admin_card_approval(callback_query: types.CallbackQuery, state: FSMContext):
     try:
@@ -45,6 +49,8 @@ async def handle_admin_card_approval(callback_query: types.CallbackQuery, state:
             months_count = order.get('months', 'не указано')
             purchase_info = f"💎 Куплено преміум: {months_count} місяців\n"
 
+        bot_instance = await get_bot()  # Динамический импорт
+
         if action == "approve":
             logger.info(f"Заказ {order_id} подтвержден администратором")
             if is_text_message:
@@ -63,13 +69,13 @@ async def handle_admin_card_approval(callback_query: types.CallbackQuery, state:
                 recipient_address = await get_recipient_address(order["type"], user_id, username, quantity)
                 if not recipient_address:
                     logger.error(f"Не удалось получить адрес для {order['type']} (user_id: {user_id}, username: {username}, quantity: {quantity})")
-                    await bot.send_message(
+                    await bot_instance.send_message(
                         user_id,
                         "❌ Помилка отримання адреси для оплати TON. Спробуйте ще раз або зв'яжіться з підтримкою.",
                         reply_markup=get_main_menu()
                     )
                     for admin_id in ADMIN_IDS:
-                        await bot.send_message(
+                        await bot_instance.send_message(
                             admin_id,
                             f"⚠️ Помилка API для користувача {username} (ID: {user_id}): не вдалося отримати адрес TON."
                         )
@@ -79,13 +85,13 @@ async def handle_admin_card_approval(callback_query: types.CallbackQuery, state:
                 transaction_data = await get_ton_payment_body(order["type"], quantity, user_id, username)
                 if not transaction_data:
                     logger.error(f"Не удалось получить тело транзакции TON для {order['type']} (user_id: {user_id}, username: {username}, quantity: {quantity})")
-                    await bot.send_message(
+                    await bot_instance.send_message(
                         user_id,
                         "❌ Помилка підготовки TON транзакції. Спробуйте ще раз або зв'яжіться з підтримкою.",
                         reply_markup=get_main_menu()
                     )
                     for admin_id in ADMIN_IDS:
-                        await bot.send_message(
+                        await bot_instance.send_message(
                             admin_id,
                             f"⚠️ Помилка підготовки транзакції TON для користувача {username} (ID: {user_id})."
                         )
@@ -102,7 +108,7 @@ async def handle_admin_card_approval(callback_query: types.CallbackQuery, state:
 
 ⚠️ Після підтвердження транзакції в гаманці, зірки/преміум будуть автоматично зараховані на ваш акаунт."""
                 try:
-                    await bot.send_message(
+                    await bot_instance.send_message(
                         user_id,
                         payment_text,
                         reply_markup=keyboards.get_ton_connect_keyboard(transaction_data, recipient_address)
@@ -110,7 +116,7 @@ async def handle_admin_card_approval(callback_query: types.CallbackQuery, state:
                     logger.info(f"Пользователю {user_id} отправлено сообщение с TON Connect для заказа {order_id}")
                 except Exception as e:
                     logger.error(f"Ошибка отправки TON Connect пользователю {user_id} для заказа {order_id}: {e}")
-                    await bot.send_message(
+                    await bot_instance.send_message(
                         user_id,
                         "❌ Помилка відправки посилання TON Connect. Зв'яжіться з підтримкою.",
                         reply_markup=get_main_menu()
@@ -120,56 +126,14 @@ async def handle_admin_card_approval(callback_query: types.CallbackQuery, state:
                 store_keyboard.add(InlineKeyboardButton("🔗 Перейти в магазин", url="https://split.tg/store"))
                 for admin_id in ADMIN_IDS:
                     try:
-                        await bot.send_message(
+                        await bot_instance.send_message(
                             admin_id,
                             f"✅ Заказ {order_id} обработан. Перейдите в магазин для выполнения:",
                             reply_markup=store_keyboard
                         )
-                        logger.info(f"Уведомление администратору {admin_id} отправлено для заказа {order_id}")
+                        logger.info(f"Уведомление администратору {admin_id} отправлено")
                     except Exception as e:
-                        logger.error(f"Ошибка отправки уведомления администратору {admin_id} для заказа {order_id}: {e}")
-
-                try:
-                    await bot.send_message(
-                        user_id,
-                        "✅ Ваша оплата підтверджена!\n💫 Замовлення обробляється.\n\n❗️ Це займе від 5 хвилин, до 2 годин.",
-                        reply_markup=get_main_menu()
-                    )
-                    
-                    # Создаем новое состояние для отзыва
-                    review_state = FSMContext(storage=state.storage, chat=user_id, user=user_id)
-                    await review_state.update_data(order_id=order_id, purchase_info=purchase_info)
-                    
-                    # Отправляем предложение оставить отзыв с кнопкой "Пропустити"
-                    await bot.send_message(
-                        user_id,
-                        "🌟 Дякуємо за покупку! Будь ласка, залиште відгук про нашу роботу:",
-                        reply_markup=keyboards.get_review_keyboard()
-                    )
-                    logger.info(f"Уведомления пользователю {user_id} отправлены для заказа {order_id} с информацией о покупке: {purchase_info.strip()}")
-                except Exception as e:
-                    logger.error(f"Ошибка отправки уведомлений пользователю {user_id} для заказа {order_id}: {e}")
-
-                order["status"] = "completed"
-                logger.info(f"Заказ {order_id} завершен, но сохраняется для отзыва с информацией: {purchase_info.strip()}")
-
-        else:
-            logger.info(f"Заказ {order_id} отклонен администратором")
-            if is_text_message:
-                await callback_query.message.edit_text("❌ Заказ отклонен.")
-            else:
-                await callback_query.message.edit_caption(caption="❌ Оплата картой отклонена.")
-            try:
-                await bot.send_message(
-                    user_id,
-                    "❌ Ваша оплата була відхилена адміністратором. Зв'яжіться з підтримкою для з'ясування причин.",
-                    reply_markup=get_main_menu()
-                )
-                logger.info(f"Уведомление об отклонении отправлено пользователю {user_id} для заказа {order_id}")
-            except Exception as e:
-                logger.error(f"Ошибка отправки уведомления об отклонении пользователю {user_id} для заказа {order_id}: {e}")
-            del orders[order_id]
-            logger.info(f"Заказ {order_id} удален из orders")
+                        logger.error(f"Ошибка уведомления администратора {admin_id}: {e}")
 
         await callback_query.answer()
 
@@ -182,8 +146,9 @@ async def handle_admin_card_approval(callback_query: types.CallbackQuery, state:
                 await callback_query.message.edit_caption(caption="❌ Помилка при обробці. Спробуйте ще раз.")
         except Exception as edit_error:
             logger.error(f"Ошибка при редактировании сообщения для заказа {order_id}: {edit_error}", exc_info=True)
+            bot_instance = await get_bot()
             for admin_id in ADMIN_IDS:
-                await bot.send_message(
+                await bot_instance.send_message(
                     admin_id,
                     f"⚠️ Помилка обробки заказа {order_id}: {str(e)}"
                 )
@@ -206,9 +171,10 @@ async def send_all_command(message: types.Message):
     
     await message.answer(f"📡 Розпочинаю розсилку для {len(user_ids)} користувачів...")
     
+    bot_instance = await get_bot()
     for user_id in user_ids:
         try:
-            await bot.send_message(user_id, text)
+            await bot_instance.send_message(user_id, text)
             success_count += 1
             await asyncio.sleep(0.05)
         except Exception as e:
@@ -250,9 +216,6 @@ async def handle_broadcast_text(message: types.Message, state: FSMContext):
         await state.finish()
         return
 
-
-
-
     text = message.text.strip()
     
     if not text:
@@ -264,9 +227,10 @@ async def handle_broadcast_text(message: types.Message, state: FSMContext):
     
     await message.answer(f"📡 Розпочинаю розсилку для {len(user_ids)} користувачів...")
     
+    bot_instance = await get_bot()
     for user_id in user_ids:
         try:
-            await bot.send_message(user_id, text)
+            await bot_instance.send_message(user_id, text)
             success_count += 1
             await asyncio.sleep(0.05)
         except Exception as e:
@@ -298,10 +262,11 @@ async def cleanup_old_orders():
                 if current_time - order_time > timedelta(hours=1):
                     to_remove.append(order_id)
             
+            bot_instance = await get_bot()
             for order_id in to_remove:
                 user_id = orders[order_id]['user_id']
                 try:
-                    await bot.send_message(
+                    await bot_instance.send_message(
                         user_id, 
                         "⏰ Ваше замовлення скасовано через тайм-аут (1 година).",
                         reply_markup=get_main_menu()
