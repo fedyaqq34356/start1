@@ -204,3 +204,8 @@ def register_handlers(dp: Dispatcher):
     dp.register_callback_query_handler(back_to_review_choice, lambda c: c.data == 'back_to_review_choice')
     dp.register_callback_query_handler(handle_rating, lambda c: c.data.startswith('rate_'), state=ReviewStates.waiting_for_rating)
     dp.register_message_handler(handle_review_text, state=ReviewStates.waiting_for_review)
+
+
+
+
+    

@@ -75,6 +75,9 @@ def get_rating_keyboard():
     )
     return keyboard
 
+
+
+
 def get_subscription_keyboard():
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton("📺 Підписатися", url=f"https://t.me/starsZEMSTA_news"))

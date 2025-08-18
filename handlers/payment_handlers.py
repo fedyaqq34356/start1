@@ -216,3 +216,7 @@ def register_handlers(dp: Dispatcher):
     dp.register_message_handler(handle_payment_screenshot, content_types=['photo'], state=CardPaymentStates.waiting_for_payment_screenshot)
     dp.register_message_handler(handle_wrong_content_type, lambda message: message.content_type != 'photo', state=CardPaymentStates.waiting_for_payment_screenshot)
     dp.register_callback_query_handler(handle_ton_payment, lambda c: c.data.startswith("pay_ton_"))
+
+
+
+    

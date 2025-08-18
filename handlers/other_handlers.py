@@ -99,3 +99,8 @@ def register_handlers(dp: Dispatcher):
         'відміна', 'отмена', 'cancel', '/cancel', '❌ відміна'
     ], state="*")
     dp.register_message_handler(handle_other_messages, lambda message: not message.text.startswith('/'), state=None, content_types=['text'])
+
+
+
+
+    

@@ -85,3 +85,8 @@ def register_handlers(dp: Dispatcher):
     dp.register_message_handler(stars_menu, text="🌟 Придбати зірки")
     dp.register_message_handler(premium_menu, text="💎 Придбати Telegram Premium")
     dp.register_callback_query_handler(check_subscription_callback, lambda c: c.data == "check_subscription")
+
+
+
+
+    

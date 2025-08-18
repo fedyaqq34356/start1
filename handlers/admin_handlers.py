@@ -250,6 +250,9 @@ async def handle_broadcast_text(message: types.Message, state: FSMContext):
         await state.finish()
         return
 
+
+
+
     text = message.text.strip()
     
     if not text:
