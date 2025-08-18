@@ -81,8 +81,3 @@ def save_user(user_id: int):
         logger.info(f"Пользователь {user_id} сохранен в базе данных")
     except sqlite3.Error as e:
         logger.error(f"Ошибка при сохранении пользователя {user_id} в базе данных: {e}")
-
-
-
-
-        
