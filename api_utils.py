@@ -96,3 +96,11 @@ async def get_ton_payment_body(service_type: str, quantity: int, user_id: int, u
     except Exception as e:
         logger.error(f"Помилка отримання тіла транзакции TON: {e}")
         return None
+
+
+
+
+
+
+
+        
