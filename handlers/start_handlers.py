@@ -6,9 +6,13 @@ from config import orders, user_ids, MAIN_CHANNEL_ID
 from database import save_user
 from keyboards import get_main_menu, get_stars_menu, get_premium_menu, get_subscription_keyboard
 from utils import subscription_required
-from main import bot  # Импорт bot из main, чтобы избежать циклических импортов
 
 logger = logging.getLogger(__name__)
+
+async def get_bot():
+    """Get bot instance dynamically to avoid circular imports"""
+    from main import bot
+    return bot
 
 async def start_command(message: types.Message):
     user_id = message.from_user.id
@@ -62,6 +66,7 @@ async def check_subscription_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
     
     if await check_subscription(user_id):
+        bot = await get_bot()
         await callback_query.message.edit_text(
             "✅ Ви успішно підписалися на канал. Тепер можете користуватися ботом!",
             reply_markup=None
@@ -69,11 +74,12 @@ async def check_subscription_callback(callback_query: types.CallbackQuery):
         await bot.send_message(user_id, "🌟Ласкаво просимо! Оберіть дію:", reply_markup=get_main_menu())
         logger.info(f"Пользователь {user_id} прошел проверку подписки")
     else:
-        await callback_query.answer("❌ Ви ще не підписалися на канал. Будь ласка, підпишіться та спробуйте знову.")
+        await callback_query.answer("❌ Ви ще не підписалися на канал. Будь ласка, підпішіться та спробуйте знову.")
         logger.warning(f"Пользователь {user_id} не подписан на канал")
 
 async def check_subscription(user_id: int) -> bool:
     try:
+        bot = await get_bot()
         member = await bot.get_chat_member(MAIN_CHANNEL_ID, user_id)
         return member.status in ['member', 'administrator', 'creator']
     except Exception as e:
@@ -85,8 +91,3 @@ def register_handlers(dp: Dispatcher):
     dp.register_message_handler(stars_menu, text="🌟 Придбати зірки")
     dp.register_message_handler(premium_menu, text="💎 Придбати Telegram Premium")
     dp.register_callback_query_handler(check_subscription_callback, lambda c: c.data == "check_subscription")
-
-
-
-
-    
