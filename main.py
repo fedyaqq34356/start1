@@ -478,7 +478,7 @@ async def handle_card_payment(callback_query: types.CallbackQuery, state: FSMCon
         
         await callback_query.message.answer(
             payment_text,
-            parse_mode="Markdown",
+            parse_mode="HTML",
             reply_markup=get_cancel_keyboard()
         )
         logger.info(f"Отправлено сообщение с реквизитами и кнопкой отмены пользователю {callback_query.from_user.id}")
@@ -501,26 +501,50 @@ async def handle_username_input(message: types.Message, state: FSMContext):
         username = message.text.strip()
         logger.debug(f"Получен username: {username} от пользователя {message.from_user.id}")
 
+        # Валидация username
+        if not username:
+            await message.answer("❌ Username не може бути порожнім. Спробуйте ще раз:")
+            return
+
+        # Убираем @ если пользователь его добавил
+        if username.startswith('@'):
+            username = username[1:]
+
+        # Проверка формата username (латиница, цифры, подчеркивания, длина 5-32 символа)
+        if not re.match(r'^[a-zA-Z0-9_]{5,32}$', username):
+            await message.answer(
+                "❌ Неправильний формат username!\n\n"
+                "Username повинен:\n"
+                "• Містити тільки латинські літери (a-z, A-Z)\n"
+                "• Цифри (0-9)\n"
+                "• Підкреслення (_)\n"
+                "• Бути довжиною від 5 до 32 символів\n"
+                "• Не містити пробілів та спецсимволів\n\n"
+                "Приклад: user_name або UserName123\n"
+                "Спробуйте ще раз:"
+            )
+            return
+
         data = await state.get_data()
         order_id = data.get('order_id')
         logger.debug(f"Проверка order_id: {order_id}")
 
-        if order_id not in orders:
+        if not order_id or order_id not in orders:
             logger.error(f"Заказ {order_id} не найден для пользователя {message.from_user.id}")
             await message.answer("❌ Замовлення не знайдено.")
             await state.finish()
             return
 
+        # Сохраняем username в заказ
         orders[order_id]['customer_username'] = username
+        logger.info(f"Username {username} сохранен для заказа {order_id}")
 
         await message.answer(
-            f"""✅ Username збережено: {username}
-
-💳 Тепер оплатіть {orders[order_id]['price']} грн на картку:
-`{CARD_NUMBER}`
-
-📝 Після оплати надішліть сюди в чат скріншот оплати.""",
-            parse_mode="Markdown",
+            f"✅ Username збережено: @{username}\n\n"
+            f"💳 Тепер оплатіть {orders[order_id]['price']} грн на картку:\n"
+            f"<code>{CARD_NUMBER}</code>\n\n"
+            f"📝 Після оплати надішліть сюди в чат скріншот оплати.",
+            parse_mode="HTML",
             reply_markup=get_cancel_keyboard()
         )
 
@@ -529,9 +553,11 @@ async def handle_username_input(message: types.Message, state: FSMContext):
 
     except Exception as e:
         logger.error(f"Ошибка в handle_username_input для пользователя {message.from_user.id}: {str(e)}")
-        await message.answer("❌ Помилка при обробці username. Спробуйте ще раз.")
-        await state.finish()
-
+        await message.answer(
+            "❌ Помилка при обробці username. Спробуйте ще раз або натисніть '❌ Відміна' для скасування.",
+            reply_markup=get_cancel_keyboard()
+        )
+        # НЕ завершаем состояние, даем пользователю еще попытку
         
 async def check_split_api_health():
     """Проверка доступности Split API"""
