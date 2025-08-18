@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher, executor
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 from config import BOT_TOKEN, RESTART_ON_ERROR, ADMIN_IDS
-from database import init_db  # Import database initialization
+from database import init_db
 from handlers import (
     start_handlers,
     payment_handlers,
@@ -36,8 +36,10 @@ async def on_startup(dp):
     init_db()
     logger.info("✅ База данных инициализирована")
     
-    # Import utils here to avoid circular imports
-    from utils import handle_critical_error, safe_restart
+    # Запускаем задачу cleanup_old_orders здесь
+    from admin_handlers import cleanup_old_orders
+    asyncio.create_task(cleanup_old_orders())
+    logger.info("✅ Задача cleanup_old_orders запущена")
     
     logger.info("🚀 Бот успешно запущен")
 
@@ -46,7 +48,7 @@ async def on_shutdown(dp):
     logger.info("🛑 Остановка бота...")
     await bot.close()
 
-# Регистрация handlers (импортируем модули, они сами регистрируют обработчики через dp)
+# Регистрация handlers
 start_handlers.register_handlers(dp)
 payment_handlers.register_handlers(dp)
 review_handlers.register_handlers(dp)
