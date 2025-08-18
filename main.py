@@ -94,19 +94,23 @@ def init_db():
         if 'order_id' not in columns:
             c.execute('ALTER TABLE reviews ADD COLUMN order_id TEXT')
 
-        # Проверка существующих отзывов с id >= 39
-        c.execute("SELECT COUNT(*) FROM reviews WHERE id >= 39")
+        # Проверка существующих отзывов с id >= 60
+        c.execute("SELECT COUNT(*) FROM reviews WHERE id >= 60")
         conflict_count = c.fetchone()[0]
         if conflict_count == 0:  # Только если нет конфликтующих записей
-            # Установка начального значения автоинкремента на 39
+            # Установка начального значения автоинкремента на 59 (следующий будет 60)
             c.execute("SELECT seq FROM sqlite_sequence WHERE name='reviews'")
             result = c.fetchone()
             if result is None:
-                c.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('reviews', 38)")
-                logger.info("Автоинкремент для reviews установлен на 38 (следующий ID будет 39)")
-            elif result[0] < 38:
-                c.execute("UPDATE sqlite_sequence SET seq = 38 WHERE name = 'reviews'")
-                logger.info("Автоинкремент для reviews обновлен на 38 (следующий ID будет 39)")
+                c.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('reviews', 59)")
+                logger.info("Автоинкремент для reviews установлен на 59 (следующий ID будет 60)")
+            else:
+                # Обновляем только если текущее значение меньше 59
+                if result[0] < 59:
+                    c.execute("UPDATE sqlite_sequence SET seq = 59 WHERE name = 'reviews'")
+                    logger.info("Автоинкремент для reviews обновлен на 59 (следующий ID будет 60)")
+                else:
+                    logger.info(f"Автоинкремент уже установлен на {result[0]}, не изменяем")
 
         conn.commit()
         logger.info("База данных успешно инициализирована")
