@@ -9,6 +9,7 @@ from aiogram import Bot, Dispatcher, executor
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 from config import BOT_TOKEN, RESTART_ON_ERROR, ADMIN_IDS
+from database import init_db  # Import database initialization
 from handlers import (
     start_handlers,
     payment_handlers,
@@ -16,7 +17,6 @@ from handlers import (
     admin_handlers,
     other_handlers
 )
-from utils import handle_critical_error, safe_restart, on_startup, on_shutdown
 
 # Налаштування логування
 logging.basicConfig(
@@ -29,6 +29,22 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
+
+async def on_startup(dp):
+    """Initialize database and other startup tasks"""
+    logger.info("🔧 Инициализация базы данных...")
+    init_db()
+    logger.info("✅ База данных инициализирована")
+    
+    # Import utils here to avoid circular imports
+    from utils import handle_critical_error, safe_restart
+    
+    logger.info("🚀 Бот успешно запущен")
+
+async def on_shutdown(dp):
+    """Cleanup on shutdown"""
+    logger.info("🛑 Остановка бота...")
+    await bot.close()
 
 # Регистрация handlers (импортируем модули, они сами регистрируют обработчики через dp)
 start_handlers.register_handlers(dp)
@@ -44,8 +60,12 @@ if __name__ == '__main__':
     print(f"🔄 Авто-перезапуск: {'✅' if RESTART_ON_ERROR else '❌'}")
     
     if RESTART_ON_ERROR:
+        async def handle_critical_error_wrapper(exc_type, exc_value, exc_traceback):
+            from utils import handle_critical_error
+            await handle_critical_error(exc_type, exc_value, exc_traceback)
+        
         sys.excepthook = lambda exc_type, exc_value, exc_traceback: asyncio.run(
-            handle_critical_error(exc_type, exc_value, exc_traceback)
+            handle_critical_error_wrapper(exc_type, exc_value, exc_traceback)
         )
     
     try:
@@ -58,10 +78,9 @@ if __name__ == '__main__':
     except Exception as e:
         logger.critical(f"Критична помилка при запуску: {e}")
         if RESTART_ON_ERROR:
-            asyncio.run(safe_restart())
+            async def safe_restart_wrapper():
+                from utils import safe_restart
+                await safe_restart()
+            asyncio.run(safe_restart_wrapper())
         else:
             raise
-
-
-
-        
