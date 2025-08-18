@@ -48,5 +48,5 @@ def load_users():
         logging.error(f"Ошибка при загрузке пользователей: {e}")
         return set()
 
-# user_ids загружается из базы
+# user_ids загружается из базы с обработкой ошибок
 user_ids = load_users()
