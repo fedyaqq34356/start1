@@ -1,18 +1,24 @@
 import asyncio
 import logging
+import os
 from datetime import datetime
 from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.types import InputFile
 
+import config
 from config import orders, VIDEO_PATH, CARD_NUMBER, ADMIN_IDS
 from keyboards import get_cancel_keyboard, get_ton_connect_keyboard, get_main_menu
 from states import CardPaymentStates
 from api_utils import get_recipient_address, get_ton_payment_body
 from utils import send_order_to_admin, send_card_order_to_admin
-from main import bot
 
 logger = logging.getLogger(__name__)
+
+async def get_bot():
+    """Get bot instance dynamically to avoid circular imports"""
+    from main import bot
+    return bot
 
 async def handle_selection(callback_query: types.CallbackQuery, state: FSMContext):
     selection = callback_query.data.replace("select_", "")
@@ -42,21 +48,26 @@ async def handle_selection(callback_query: types.CallbackQuery, state: FSMContex
     
     await state.update_data(order_id=order_id)
     
-    payment_text = f"""💳 Выберите способ оплаты:
+    payment_text = f"""💳 Виберіть спосіб оплати:
 
 {'⭐ Кількість зірок: ' + str(order_data['stars']) if order_data['type'] == 'stars' else '💎 Термін: ' + str(order_data['months']) + ' місяців'}
 💰 Сума до оплати: {order_data['price']}₴
 
-Доступные способы оплаты:
+Доступні способи оплати:
 💎 Оплата TON - через TON Connect
 💳 Оплата картой"""
     
     logger.info(f"Отображение меню оплаты для заказа {order_id}")
+    
+    # Import keyboards dynamically to avoid circular imports
+    import keyboards
     await callback_query.message.edit_text(payment_text, reply_markup=keyboards.get_payment_method_keyboard(order_id))
     await callback_query.answer()
 
 async def handle_card_payment(callback_query: types.CallbackQuery, state: FSMContext):
     logger.debug(f"Получен callback_query: {callback_query.data} от пользователя {callback_query.from_user.id}")
+    bot = await get_bot()
+    
     try:
         order_id = callback_query.data.replace("pay_card_", "")
         logger.info(f"Начало обработки оплаты картой для заказа {order_id} пользователем {callback_query.from_user.id}")
@@ -115,6 +126,8 @@ async def handle_card_payment(callback_query: types.CallbackQuery, state: FSMCon
         await callback_query.answer()
 
 async def handle_username_input(message: types.Message, state: FSMContext):
+    bot = await get_bot()
+    
     try:
         username = message.text.strip()
         logger.debug(f"Получен username: {username} от пользователя {message.from_user.id}")
@@ -137,7 +150,7 @@ async def handle_username_input(message: types.Message, state: FSMContext):
 💳 Тепер оплатіть {orders[order_id]['price']} грн на картку:
 `{CARD_NUMBER}`
 
-📝 Після оплати надішліть сюди в чат скріншот оплати.""",
+📷 Після оплати надішліть сюди в чат скріншот оплати.""",
             parse_mode="Markdown",
             reply_markup=get_cancel_keyboard()
         )
@@ -216,7 +229,3 @@ def register_handlers(dp: Dispatcher):
     dp.register_message_handler(handle_payment_screenshot, content_types=['photo'], state=CardPaymentStates.waiting_for_payment_screenshot)
     dp.register_message_handler(handle_wrong_content_type, lambda message: message.content_type != 'photo', state=CardPaymentStates.waiting_for_payment_screenshot)
     dp.register_callback_query_handler(handle_ton_payment, lambda c: c.data.startswith("pay_ton_"))
-
-
-
-    
