@@ -1,7 +1,10 @@
 import os
 from dotenv import load_dotenv
+import sqlite3
+import logging
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
 # Конфігурація з змінних оточення
 BOT_TOKEN = os.getenv('BOT_TOKEN')
@@ -29,8 +32,21 @@ STAR_PRICES = {
     "12 місяців💎 – 1699₴": {"months": 12, "price": 1699, "type": "premium"},
 }
 
-# Тимчасове зберігання замовлень (глобально, но лучше использовать Redis в будущем)
+# Тимчасове зберігання замовлень
 orders = {}
 
+# Функция для загрузки пользователей из базы
+def load_users():
+    try:
+        conn = sqlite3.connect('bot_database.db')
+        c = conn.cursor()
+        c.execute("SELECT user_id FROM users")
+        user_ids = {row[0] for row in c.fetchall()}
+        conn.close()
+        return user_ids
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка при загрузке пользователей: {e}")
+        return set()
 
-
+# user_ids загружается из базы
+user_ids = load_users()
