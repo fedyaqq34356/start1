@@ -244,7 +244,6 @@ def get_review_keyboard():
     keyboard = InlineKeyboardMarkup()
     keyboard.add(
         InlineKeyboardButton("⭐ Залишити відгук", callback_data="leave_review"),
-        InlineKeyboardButton("❌ Пропустити", callback_data="skip_review")
     )
     return keyboard
 
