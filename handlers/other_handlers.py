@@ -3,13 +3,19 @@ import random
 
 from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+import config
 from config import ADMIN_IDS
 from keyboards import get_main_menu
 from utils import subscription_required
-from main import bot
 
 logger = logging.getLogger(__name__)
+
+async def get_bot():
+    """Get bot instance dynamically to avoid circular imports"""
+    from main import bot
+    return bot
 
 async def help_command(message: types.Message):
     help_text = """📋 Як купити зірки або Telegram Premium:
@@ -99,8 +105,3 @@ def register_handlers(dp: Dispatcher):
         'відміна', 'отмена', 'cancel', '/cancel', '❌ відміна'
     ], state="*")
     dp.register_message_handler(handle_other_messages, lambda message: not message.text.startswith('/'), state=None, content_types=['text'])
-
-
-
-
-    
