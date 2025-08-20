@@ -238,7 +238,7 @@ def get_payment_method_keyboard(order_id: str):
     keyboard.add(
         InlineKeyboardButton("❌ Відміна", callback_data="cancel_order")
     )
-    return keyboarb
+    return keyboard
 
 def get_admin_card_approval_keyboard(order_id: str):
     keyboard = InlineKeyboardMarkup()
