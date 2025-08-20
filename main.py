@@ -461,7 +461,6 @@ async def handle_card_payment(callback_query: types.CallbackQuery, state: FSMCon
 
         payment_text = f"""✨Вкажіть @username (тег), на який треба відправити зірки.
 
-Наприклад: @Zxc5_2
 ⚠️Обов'язково перевірте, що ви вказали правильний нік!"""
 
         
