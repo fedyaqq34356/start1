@@ -405,7 +405,7 @@ async def send_card_order_to_admin(order_id: str, order: Dict):
         order_text = f"""💳 Новый заказ с оплатой картой:
 
 👤 Пользователь: {order['user_name']} (ID: {order['user_id']})
-📝 Username клиента: {order.get('customer_username', 'не указан')}
+📝 Username клиента: @{order.get('customer_username', 'не указан')}
 📦 Тип: {'Звезды' if order['type'] == 'stars' else 'Telegram Premium'}
 {'⭐ Количество: ' + str(order.get('stars', 'не указано')) if order['type'] == 'stars' else '💎 Срок: ' + str(order.get('months', 'не указано')) + ' месяцев'}
 💰 Сумма: {order['price']}₴
