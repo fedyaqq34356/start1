@@ -1263,9 +1263,9 @@ async def handle_selection(callback_query: types.CallbackQuery, state: FSMContex
 {'⭐ Кількість зірок: ' + str(order_data['stars']) if order_data['type'] == 'stars' else '💎 Термін: ' + str(order_data['months']) + ' місяців'}
 💰 Сума до оплати: {order_data['price']}₴
 
-Доступные способы оплаты:
+Доступні способи оплати:
 💎 Оплата TON - через TON Connect
-💳 Оплата картой"""
+💳 Оплата карткой"""
     
     logger.info(f"Отображение меню оплаты для заказа {order_id}")
     await callback_query.message.edit_text(payment_text, reply_markup=get_payment_method_keyboard(order_id))
