@@ -192,7 +192,7 @@ orders = {}
 
 def get_main_menu(user_id: int | None = None) -> ReplyKeyboardMarkup:
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add(KeyboardButton("🌟 Придбати зірки"))
+    keyboard.add(KeyboardButton("⭐ Придбати зірки"))
     keyboard.add(KeyboardButton("💎 Придбати Telegram Premium"))
     keyboard.add(KeyboardButton("💻 Зв'язатися з підтримкою"))
     keyboard.add(KeyboardButton("📣 Канал з відгуками"))
@@ -1164,7 +1164,7 @@ async def safe_restart():
     
     os.execl(sys.executable, sys.executable, *sys.argv)
 
-@dp.message_handler(Text(equals="🌟 Придбати зірки"))
+@dp.message_handler(Text(equals="⭐ Придбати зірки"))
 async def stars_menu(message: types.Message):
     logger.info(f"Пользователь {message.from_user.id} запросил меню звезд")
     if not await subscription_required(message.from_user.id):
@@ -1198,7 +1198,7 @@ async def reviews_channel(message: types.Message):
 
 ADMIN_IDS = [6186532466,6862952576]
 
-@dp.message_handler(Text(equals="🆘 Зв'язатися з підтримкою"))
+@dp.message_handler(Text(equals="💻 Зв'язатися з підтримкою"))
 async def support_contact(message: types.Message):
     if not await subscription_required(message.from_user.id):
         return
