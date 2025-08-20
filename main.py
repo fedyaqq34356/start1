@@ -192,7 +192,7 @@ orders = {}
 
 def get_main_menu(user_id: int | None = None) -> ReplyKeyboardMarkup:
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add(KeyboardButton("⭐ Придбати зірки"))
+    keyboard.add(KeyboardButton("🌟 Придбати зірки"))
     keyboard.add(KeyboardButton("💎 Придбати Telegram Premium"))
     keyboard.add(KeyboardButton("💻 Зв'язатися з підтримкою"))
     keyboard.add(KeyboardButton("📣 Канал з відгуками"))
