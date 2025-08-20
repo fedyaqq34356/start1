@@ -95,20 +95,20 @@ def init_db():
             c.execute('ALTER TABLE reviews ADD COLUMN order_id TEXT')
 
         # Проверка существующих отзывов с id >= 60
-        c.execute("SELECT COUNT(*) FROM reviews WHERE id >= 60")
+        c.execute("SELECT COUNT(*) FROM reviews WHERE id >= 80")
         conflict_count = c.fetchone()[0]
         if conflict_count == 0:  # Только если нет конфликтующих записей
             # Установка начального значения автоинкремента на 59 (следующий будет 60)
             c.execute("SELECT seq FROM sqlite_sequence WHERE name='reviews'")
             result = c.fetchone()
             if result is None:
-                c.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('reviews', 59)")
-                logger.info("Автоинкремент для reviews установлен на 59 (следующий ID будет 60)")
+                c.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('reviews', 79)")
+                logger.info("Автоинкремент для reviews установлен на 79 (следующий ID будет 80)")
             else:
                 # Обновляем только если текущее значение меньше 59
-                if result[0] < 59:
-                    c.execute("UPDATE sqlite_sequence SET seq = 59 WHERE name = 'reviews'")
-                    logger.info("Автоинкремент для reviews обновлен на 59 (следующий ID будет 60)")
+                if result[0] < 79:
+                    c.execute("UPDATE sqlite_sequence SET seq = 79 WHERE name = 'reviews'")
+                    logger.info("Автоинкремент для reviews обновлен на 79 (следующий ID будет 80)")
                 else:
                     logger.info(f"Автоинкремент уже установлен на {result[0]}, не изменяем")
 
@@ -179,8 +179,9 @@ STAR_PRICES = {
     "200⭐ – 170₴": {"stars": 200, "price": 170, "type": "stars"},
     "300⭐ – 255₴": {"stars": 300, "price": 255, "type": "stars"},
     "400⭐ – 340₴": {"stars": 400, "price": 340, "type": "stars"},
-    "500⭐ – 390₴": {"stars": 500, "price": 390, "type": "stars"},
+    "500⭐ – 410₴": {"stars": 500, "price": 410, "type": "stars"},  # ИЗМЕНЕНО С 390
     "1000⭐ – 825₴": {"stars": 1000, "price": 825, "type": "stars"},
+    "10000⭐ – 8150₴": {"stars": 10000, "price": 8150, "type": "stars"},  # ДОБАВЛЕНО
     "3 місяці💎 – 669₴": {"months": 3, "price": 669, "type": "premium"},
     "6 місяців💎 – 999₴": {"months": 6, "price": 999, "type": "premium"},
     "12 місяців💎 – 1699₴": {"months": 12, "price": 1699, "type": "premium"},
@@ -209,8 +210,9 @@ def get_stars_menu():
         InlineKeyboardButton("200⭐ – 170₴", callback_data="select_200⭐ – 170₴"),
         InlineKeyboardButton("300⭐ – 255₴", callback_data="select_300⭐ – 255₴"),
         InlineKeyboardButton("400⭐ – 340₴", callback_data="select_400⭐ – 340₴"),
-        InlineKeyboardButton("500⭐ – 390₴", callback_data="select_500⭐ – 390₴"),
-        InlineKeyboardButton("1000⭐ – 825₴", callback_data="select_1000⭐ – 825₴")
+        InlineKeyboardButton("500⭐ – 410₴", callback_data="select_500⭐ – 410₴"),  # ИЗМЕНЕНО
+        InlineKeyboardButton("1000⭐ – 825₴", callback_data="select_1000⭐ – 825₴"),
+        InlineKeyboardButton("10000⭐ – 8150₴", callback_data="select_10000⭐ – 8150₴")  # ДОБАВЛЕНО
     )
     keyboard.add(InlineKeyboardButton("⬅️ Назад", callback_data="back_to_main"))
     return keyboard
@@ -455,30 +457,13 @@ async def handle_card_payment(callback_query: types.CallbackQuery, state: FSMCon
         order["payment_method"] = "card"
         logger.debug(f"Обновлен заказ: {order}")
 
-        try:
-            if os.path.exists(VIDEO_PATH) and os.access(VIDEO_PATH, os.R_OK):
-                await bot.send_video(
-                    callback_query.from_user.id,
-                    video=InputFile(VIDEO_PATH),
-                    caption="📹 Приклад оплати картою"
-                )
-                logger.info(f"Видео отправлено пользователю {callback_query.from_user.id}")
-            else:
-                logger.warning(f"Видео {VIDEO_PATH} не найдено или недоступно")
-                await bot.send_message(callback_query.from_user.id, "📹 Приклад оплати недоступний")
-        except Exception as e:
-            logger.error(f"Ошибка при отправке видео пользователю {callback_query.from_user.id}: {str(e)}")
-            await bot.send_message(callback_query.from_user.id, "📹 Помилка при відправці прикладу оплати")
 
-        payment_text = f"""💳 Оплата картой:
 
-До оплати: {order['price']} грн
+        payment_text = f"""✨Вкажіть @username (тег), на який треба відправити зірки.
 
-📋 Реквізити для оплати:
-💳 Номер картки: `{CARD_NUMBER}`
+Наприклад: @Zxc5_2
+⚠️Обов'язково перевірте, що ви вказали правильний нік!"""
 
-⚠️ Спочатку напишіть свій username (@username) на які мають прийти зірки
-💡 Username може містити латинські літери, цифри та підкреслення (_)"""
         
         await callback_query.message.answer(
             payment_text,
@@ -544,11 +529,12 @@ async def handle_username_input(message: types.Message, state: FSMContext):
         logger.info(f"Username {username} сохранен для заказа {order_id}")
 
         await message.answer(
-            f"✅ Username збережено: @{username}\n\n"
-            f"💳 Тепер оплатіть {orders[order_id]['price']} грн на картку:\n"
-            f"<code>{CARD_NUMBER}</code>\n\n"
-            f"📝 Після оплати надішліть сюди в чат скріншот оплати.",
-            parse_mode="HTML",
+            f"💳 Банк України\n"
+            f"Карта: {CARD_NUMBER}\n"
+            f"💰 До оплати: {orders[order_id]['price']:.2f} UAH\n"
+            f"⚙️Зірки на аккаунт: @{username}\n"
+            f"⭐️@{username} отримає: {orders[order_id]['stars']} ⭐️\n"
+            f"📸 Після оплати, відправте сюди в чат квитанцію оплати:",
             reply_markup=get_cancel_keyboard()
         )
 
