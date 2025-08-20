@@ -230,15 +230,15 @@ def get_premium_menu():
 def get_payment_method_keyboard(order_id: str):
     keyboard = InlineKeyboardMarkup()
     keyboard.add(
-        InlineKeyboardButton("💎 Сплатити TON", callback_data=f"pay_ton_{order_id}")
+        InlineKeyboardButton("💳 Сплатити карткою", callback_data=f"pay_card_{order_id}")
     )
     keyboard.add(
-        InlineKeyboardButton("💳 Сплатити карткою", callback_data=f"pay_card_{order_id}")
+        InlineKeyboardButton("💎 Сплатити TON", callback_data=f"pay_ton_{order_id}")
     )
     keyboard.add(
         InlineKeyboardButton("❌ Відміна", callback_data="cancel_order")
     )
-    return keyboard
+    return keyboarb
 
 def get_admin_card_approval_keyboard(order_id: str):
     keyboard = InlineKeyboardMarkup()
