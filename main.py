@@ -461,9 +461,9 @@ async def handle_card_payment(callback_query: types.CallbackQuery, state: FSMCon
 
 
 
-        payment_text = f"""✨Вкажіть @username (тег), на який треба відправити зірки.
+        payment_text = f"""<b>✨Вкажіть @username (тег), на який треба відправити зірки.</b>
 
-⚠️Обов'язково перевірте, що ви вказали правильний нік!"""
+<b>⚠️Обов'язково перевірте, що ви вказали правильний нік!</b>"""
 
         
         await callback_query.message.answer(
@@ -530,13 +530,14 @@ async def handle_username_input(message: types.Message, state: FSMContext):
         logger.info(f"Username {username} сохранен для заказа {order_id}")
 
         await message.answer(
-            f"💳 Банк України\n"
-            f"Карта: {CARD_NUMBER}\n\n"
-            f"💰 До оплати: {orders[order_id]['price']:.2f} UAH\n\n"
-            f"⚙️Зірки на аккаунт: @{username}\n"
-            f"⭐️@{username} отримає: {orders[order_id]['stars']} ⭐️\n\n"
-            f"📸 Після оплати, відправте сюди в чат квитанцію оплати:",
-            reply_markup=get_cancel_keyboard()
+            f"<b>💳 Банк України</b>\n"
+            f"<b>Карта:</b> {CARD_NUMBER}\n\n"
+            f"<i><b>💰 До оплати: {orders[order_id]['price']:.2f} UAH</b></i>\n\n"
+            f"<i><b>⚙️Зірки на аккаунт: @{username}</b></i>\n"
+            f"<i><b>⭐️@{username} отримає: {orders[order_id]['stars']} ⭐️</b></i>\n\n"
+            f"<b>📸 Після оплати, відправте сюди в чат квитанцію оплати:</b>",
+            reply_markup=get_cancel_keyboard(),
+            parse_mode="HTML"
         )
 
         await CardPaymentStates.waiting_for_payment_screenshot.set()
@@ -638,15 +639,16 @@ async def handle_admin_card_approval(callback_query: types.CallbackQuery, state:
                     await callback_query.answer()
                     return
 
-                payment_text = f"""💎 Оплата через TON Connect:
+                payment_text = f"""<b>💎 Оплата через TON Connect:</b>
 
-{'⭐ Кількість зірок: ' + str(order['stars']) if order['type'] == 'stars' else '💎 Термін: ' + str(order['months']) + ' місяців'}
-💰 Сума: {order['price']}₴
+<i><b>{'⭐ Кількість зірок: ' + str(order['stars']) if order['type'] == 'stars' else '💎 Термін: ' + str(order['months']) + ' місяців'}</b></i>
+<i>💰 Сума: {order['price']}₴</i>
 
-📱 Натисніть кнопку нижче для оплати через TON Connect
-🔒 Безпечна транзакція через блокчейн TON
+<b>📱 Натисніть кнопку нижче для оплати через TON Connect</b>
+<b>🔒 Безпечна транзакція через блокчейн TON</b>
 
-⚠️ Після підтвердження транзакції в гаманці, зірки/преміум будуть автоматично зараховані на ваш акаунт."""
+<b>⚠️ Після підтвердження транзакції в гаманці, зірки/преміум будуть автоматично зараховані на ваш акаунт.</b>"""
+
                 try:
                     await bot.send_message(
                         user_id,
@@ -1021,23 +1023,24 @@ async def start_command(message: types.Message):
     if not await subscription_required(message.from_user.id):
         return
     
-    welcome_text = """🌟 Ласкаво просимо до @ZEMSTA_stars_bot!
-✨ Обирай, купуй і користуйся зірками!
+    welcome_text = """<b>🌟 Ласкаво просимо до @ZEMSTA_stars_bot!</b>
+<b>✨ Обирай, купуй і користуйся зірками!</b>
 
-🔥 Економія до 30%!
-💎 Оплата TON або ₴ — як зручно.
+<b>🔥 Економія до 30%!</b>
 
-👇 Натисни кнопки нижче і починай легко! 😊"""
+<b>💎 Оплата TON або ₴ — як зручно.</b>
+
+<b>👇 Натисни кнопки нижче і починай легко! 😊</b>"""
     
     try:
         with open('welcome_image.jpg', 'rb') as photo:
-            await message.answer_photo(photo, caption=welcome_text, reply_markup=get_main_menu())
+            await message.answer_photo(photo, caption=welcome_text, reply_markup=get_main_menu(), parse_mode="HTML")
     except FileNotFoundError:
         logger.warning("Файл welcome_image.jpg не найден")
-        await message.answer(welcome_text, reply_markup=get_main_menu())
+        await message.answer(welcome_text, reply_markup=get_main_menu(), parse_mode="HTML")
     except Exception as e:
         logger.error(f"Ошибка при отправке изображения: {e}")
-        await message.answer(welcome_text, reply_markup=get_main_menu())
+        await message.answer(welcome_text, reply_markup=get_main_menu(), parse_mode="HTML")
     
     logger.info(f"Пользователь {message.from_user.id} запустил бот")
 
@@ -1172,8 +1175,9 @@ async def stars_menu(message: types.Message):
         return
         
     await message.answer(
-        "🌟 Придбати зірки можна за такими цінами:",
-        reply_markup=get_stars_menu()
+        "<b>🌟 Придбати зірки можна за такими цінами:</b>",
+        reply_markup=get_stars_menu(),
+        parse_mode="HTML"
     )
 
 @dp.message_handler(Text(equals="💎 Придбати Telegram Premium"))
@@ -1182,8 +1186,9 @@ async def premium_menu(message: types.Message):
         return
         
     await message.answer(
-        "💎 Придбати Telegram Premium можна за такими цінами:",
-        reply_markup=get_premium_menu()
+        "<b>💎 Придбати Telegram Premium можна за такими цінами:</b>",
+        reply_markup=get_premium_menu(),
+        parse_mode="HTML"
     )
 
 @dp.message_handler(Text(equals="📣 Канал з відгуками"))
@@ -1193,7 +1198,13 @@ async def reviews_channel(message: types.Message):
         
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton("📣 Перейти до каналу", url="https://t.me/starsZEMSTA"))
-    await message.answer("📣 Перегляньте відгуки наших клієнтів у нашому каналі:", reply_markup=keyboard)
+    
+    await message.answer(
+        "<b>📣 Перегляньте відгуки наших клієнтів у нашому каналі:</b>", 
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    
     logger.info(f"Пользователь {message.from_user.id} запросил канал с отзывами")
 
 ADMIN_IDS = [6186532466,6862952576]
@@ -1207,7 +1218,12 @@ async def support_contact(message: types.Message):
     random_admin_id = random.choice(ADMIN_IDS)
     keyboard.add(InlineKeyboardButton("💬 Написати підтримці", url=f"tg://user?id={random_admin_id}"))
     
-    await message.answer("🆘 Для зв'язку з підтримкою натисніть кнопку нижче:", reply_markup=keyboard)
+    await message.answer(
+        "<b>🆘 Для зв'язку з підтримкою натисніть кнопку нижче:</b>", 
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    
     logger.info(f"Користувач {message.from_user.id} запросив підтримку, обраний админ {random_admin_id}")
 
 @dp.message_handler(Text(equals="📤 Розсилка"))
@@ -1217,7 +1233,7 @@ async def start_broadcast(message: types.Message):
         logger.warning(f"Пользователь {message.from_user.id} попытался выполнить команду рассылки без прав администратора")
         return
     
-    await message.answer("📝 Введіть текст для розсилки:")
+    await message.answer("<b>📝 Введіть текст для розсилки:</b>", parse_mode="HTML")
     await BroadcastStates.waiting_for_broadcast_text.set()
 
 @dp.callback_query_handler(lambda c: c.data == "back_to_main")
@@ -1258,14 +1274,15 @@ async def handle_selection(callback_query: types.CallbackQuery, state: FSMContex
     
     await state.update_data(order_id=order_id)
     
-    payment_text = f"""💳 Выберите способ оплаты:
+    payment_text = f"""<b>💳 Выберите способ оплаты:</b>
 
-{'⭐ Кількість зірок: ' + str(order_data['stars']) if order_data['type'] == 'stars' else '💎 Термін: ' + str(order_data['months']) + ' місяців'}
-💰 Сума до оплати: {order_data['price']}₴
+<i>{'⭐ Кількість зірок: ' + str(order_data['stars']) if order_data['type'] == 'stars' else '💎 Термін: ' + str(order_data['months']) + ' місяців'}</i>
+<i>💰 Сума до оплати: {order_data['price']}₴</i>
 
-Доступні способи оплати:
-💎 Оплата TON - через TON Connect
-💳 Оплата карткой"""
+<b>Доступні способи оплати:</b>
+<b>💎 Оплата TON - через TON Connect</b>
+<b>🇺🇦Оплата карткой</b>"""
+
     
     logger.info(f"Отображение меню оплаты для заказа {order_id}")
     await callback_query.message.edit_text(payment_text, reply_markup=get_payment_method_keyboard(order_id))
