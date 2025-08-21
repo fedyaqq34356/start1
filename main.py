@@ -1281,11 +1281,10 @@ async def handle_selection(callback_query: types.CallbackQuery, state: FSMContex
 
 <b>Доступні способи оплати:</b>
 <b>💎 Оплата TON - через TON Connect</b>
-<b>🇺🇦Оплата карткой</b>"""
-
+<b>🇺🇦 Оплата карткою</b>"""
     
     logger.info(f"Отображение меню оплаты для заказа {order_id}")
-    await callback_query.message.edit_text(payment_text, reply_markup=get_payment_method_keyboard(order_id))
+    await callback_query.message.edit_text(payment_text, reply_markup=get_payment_method_keyboard(order_id), parse_mode="HTML")
     await callback_query.answer()
 
 @dp.callback_query_handler(lambda c: c.data == "cancel_order", state="*")
