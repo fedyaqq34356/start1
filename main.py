@@ -93,25 +93,23 @@ def init_db():
             c.execute('ALTER TABLE reviews ADD COLUMN username TEXT')
         if 'order_id' not in columns:
             c.execute('ALTER TABLE reviews ADD COLUMN order_id TEXT')
-
-        # Проверка существующих отзывов с id >= 60
-        c.execute("SELECT COUNT(*) FROM reviews WHERE id >= 80")
+        # Проверка существующих отзывов с id >= 83
+        c.execute("SELECT COUNT(*) FROM reviews WHERE id >= 83")
         conflict_count = c.fetchone()[0]
         if conflict_count == 0:  # Только если нет конфликтующих записей
-            # Установка начального значения автоинкремента на 59 (следующий будет 60)
+            # Установка начального значения автоинкремента на 82 (следующий будет 83)
             c.execute("SELECT seq FROM sqlite_sequence WHERE name='reviews'")
             result = c.fetchone()
             if result is None:
-                c.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('reviews', 79)")
-                logger.info("Автоинкремент для reviews установлен на 79 (следующий ID будет 80)")
+                c.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('reviews', 82)")
+                logger.info("Автоинкремент для reviews установлен на 82 (следующий ID будет 83)")
             else:
-                # Обновляем только если текущее значение меньше 59
-                if result[0] < 79:
-                    c.execute("UPDATE sqlite_sequence SET seq = 79 WHERE name = 'reviews'")
-                    logger.info("Автоинкремент для reviews обновлен на 79 (следующий ID будет 80)")
+                # Обновляем только если текущее значение меньше 82
+                if result[0] < 82:
+                    c.execute("UPDATE sqlite_sequence SET seq = 82 WHERE name = 'reviews'")
+                    logger.info("Автоинкремент для reviews обновлен на 82 (следующий ID будет 83)")
                 else:
                     logger.info(f"Автоинкремент уже установлен на {result[0]}, не изменяем")
-
         conn.commit()
         logger.info("База данных успешно инициализирована")
     except sqlite3.Error as e:
