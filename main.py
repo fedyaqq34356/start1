@@ -529,7 +529,7 @@ async def handle_username_input(message: types.Message, state: FSMContext):
 
         await message.answer(
             f"<b>💳 Банк України</b>\n"
-            f"<b>Карта:</b> {CARD_NUMBER}\n\n"
+            f"<b>Карта:</b> <code>{CARD_NUMBER}</code>\n\n"
             f"<i><b>💰 До оплати: {orders[order_id]['price']:.2f} UAH</b></i>\n\n"
             f"<i><b>⚙️Зірки на аккаунт: @{username}</b></i>\n"
             f"<i><b>⭐️@{username} отримає: {orders[order_id]['stars']} ⭐️</b></i>\n\n"
